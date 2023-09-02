@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <!-- MIT Liscense. By Nathan Wilbanks. Use and extend as you please! -->
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>7-String Guitar Chord Charting App</title>
+    <style>
+      #fretboard {
+        display: grid;
+        grid-template-columns: 30px repeat(24, 1fr);
+        gap: 2px;
+        width: 100%;
+        max-width: 840px;
+        margin: 20px auto;
+      }
+
+      .fret {
+        height: 30px;
+        border: 1px solid #ddd;
+        background-color: #f9f9f9;
+        text-align: center;
+        line-height: 30px;
+        font-size: 12px;
+      }
+
+      .note {
+        background-color: #4caf50;
+        color: white;
+      }
+
+      .fret-label,
+      .string-label {
+        display: flex;
+        text-align: center;
+        flex-direction: column;
+        align-items: center;
+        align-content: center;
+        justify-content: center;
+      }
+
+      .root {
+        background-color: #ff5733;
+        color: white;
+      }
+    </style>
+  </head>
+
+  <body>
+    <div>
+      Tuning:
+      <select id="string7">
+        <!-- Standard notes for tuning -->
+      </select>
+      <select id="string6"></select>
+      <select id="string5"></select>
+      <select id="string4"></select>
+      <select id="string3"></select>
+      <select id="string2"></select>
+      <select id="string1"></select>
+    </div>
+    <br />
+    <div>
+      <label for="rootNote">Root Note:</label>
+      <select id="rootNote">
+        <!-- Notes for root -->
+      </select>
+    </div>
+    <div>
+      <label for="scales">Scales:</label>
+      <select id="scales">
+        <!-- Scales -->
+      </select>
+    </div>
+    <div id="fretboard"></div>
+
+    <script>
+      const fretboard = document.getElementById('fretboard');
+      const rootNoteDropdown = document.getElementById('rootNote');
+      const scalesDropdown = document.getElementById('scales');
+      const tuningDropdowns = [
+        document.getElementById('string7'),
+        document.getElementById('string6'),
+        document.getElementById('string5'),
+        document.getElementById('string4'),
+        document.getElementById('string3'),
+        document.getElementById('string2'),
+        document.getElementById('string1'),
+      ];
+
+      const notes = ['A', 'A#', 'B', 'C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#'];
+
+      // Populate the tuning and root note dropdowns with notes
+      tuningDropdowns.reverse().forEach((dropdown) => {
+        notes.forEach((note, index) => {
+          const option = document.createElement('option');
+          option.value = index;
+          option.textContent = note;
+          dropdown.appendChild(option);
+        });
+      });
+      notes.forEach((note, index) => {
+        const option = document.createElement('option');
+        option.value = index;
+        option.textContent = note;
+        rootNoteDropdown.appendChild(option);
+      });
+
+      // Populate scales dropdown
+      const scales = ['Major', 'Minor', 'Dorian', 'Phrygian', 'Phrygian Dominant'];
+      scales.forEach((scale) => {
+        const option = document.createElement('option');
+        option.value = scale.toLowerCase().replace(' ', '_');
+        option.textContent = scale;
+        scalesDropdown.appendChild(option);
+      });
+
+      function generateFretboard() {
+        // Add string labels
+        for (let i = 0; i < 7; i++) {
+          const label = document.createElement('div');
+          label.className = 'string-label';
+          label.textContent = notes[tuningDropdowns[i].value];
+          fretboard.appendChild(label);
+          for (let j = 0; j < 24; j++) {
+            const fret = document.createElement('div');
+            fret.className = 'fret';
+            fretboard.appendChild(fret);
+          }
+        }
+
+        // Add fret labels
+        const fretLabelContainer = document.createElement('div');
+        fretLabelContainer.className = 'fret-label';
+        fretboard.appendChild(fretLabelContainer);
+        for (let i = 0; i < 24; i++) {
+          const label = document.createElement('div');
+          label.className = 'fret-label';
+          label.textContent = i;
+          fretboard.appendChild(label);
+        }
+      }
+
+      function getCurrentTuning() {
+        return tuningDropdowns.map((dropdown) => parseInt(dropdown.value));
+      }
+
+      function updateStringLabels() {
+        document.querySelectorAll('.string-label').forEach((label, index) => {
+          label.textContent = notes[tuningDropdowns[index].value];
+        });
+      }
+
+      function getScalePattern(rootNote, scaleType) {
+        const whole = 2;
+        const half = 1;
+        const wholeAndHalf = 3;
+
+        const scalePatterns = {
+          major: [whole, whole, half, whole, whole, whole, half],
+          minor: [whole, half, whole, whole, half, whole, whole],
+          dorian: [whole, half, whole, whole, whole, half, whole],
+          phrygian_dominant: [half, wholeAndHalf, half, whole, half, whole, whole],
+        };
+
+        let pattern = scalePatterns[scaleType];
+        let notes = [parseInt(rootNote)];
+        for (let i = 0; i < pattern.length; i++) {
+          notes.push((notes[i] + pattern[i]) % 12);
+        }
+        return notes;
+      }
+
+      function highlightNotes(rootNote, scale) {
+        const pattern = getScalePattern(rootNote, scale);
+        const tuning = getCurrentTuning();
+
+        // Clear any highlighted notes
+        document.querySelectorAll('.note').forEach((note) => note.classList.remove('note'));
+        document.querySelectorAll('.root').forEach((root) => root.classList.remove('root'));
+
+        // Highlight notes based on the selected root note, scale, and tuning
+        for (let string = 0; string < 7; string++) {
+          for (let fret = 0; fret < 24; fret++) {
+            if (pattern.includes((tuning[string] + fret) % 12)) {
+              const index = string * 25 + fret + 1; // +1 because of the label on the left
+              fretboard.children[index].classList.add('note');
+            }
+            // Highlight root notes
+            if ((tuning[string] + fret) % 12 == rootNote) {
+              const index = string * 25 + fret + 1;
+              fretboard.children[index].classList.add('root');
+            }
+          }
+        }
+      }
+
+      rootNoteDropdown.addEventListener('change', function () {
+        highlightNotes(this.value, scalesDropdown.value);
+      });
+
+      scalesDropdown.addEventListener('change', function () {
+        highlightNotes(rootNoteDropdown.value, this.value);
+      });
+
+      tuningDropdowns.forEach((dropdown) => {
+        dropdown.addEventListener('change', function () {
+          updateStringLabels();
+          highlightNotes(rootNoteDropdown.value, scalesDropdown.value);
+        });
+      });
+
+      generateFretboard();
+    </script>
+  </body>
+</html>
